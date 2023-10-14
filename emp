@@ -1,0 +1,66 @@
+import pandas as pd
+
+# Define the input file path (you can change it to your Excel file path)
+file_path = "employee.xlsx"
+
+# Read the Excel file using pandas
+df = pd.read_excel(file_path)
+
+# Create a dictionary to store employees' data
+employees_data = {}
+
+# Define the actual column names in your Excel file
+employee_name_column = "Employee Name"
+date_column = "Time"
+hours_worked_column = "Timecard Hours (as Time)"
+
+# Helper function to convert time format (hh:mm) to minutes
+def time_to_minutes(time_str):
+    hours, minutes = map(int, time_str.split(':'))
+    return hours * 60 + minutes
+
+# Iterate through the DataFrame to find and print the required information
+for index, row in df.iterrows():
+    employee_name = row[employee_name_column]
+    date = row[date_column]
+    
+    # Check for NaN values and handle them
+    hours_worked_str = row[hours_worked_column]
+    hours_worked = 0  # Default value
+    
+    if not pd.isna(hours_worked_str):
+        # Handle time format (hh:mm) and convert to minutes
+        hours_worked = time_to_minutes(hours_worked_str)
+    
+    if employee_name not in employees_data:
+        employees_data[employee_name] = {'shifts': [], 'consecutive_days': 0, 'previous_date': None}
+    
+    employees_data[employee_name]['shifts'].append((date, hours_worked))
+    
+    if employees_data[employee_name]['previous_date'] is not None:
+        date_diff = (date - employees_data[employee_name]['previous_date']).days
+        if date_diff == 1:
+            employees_data[employee_name]['consecutive_days'] += 1
+        else:
+            employees_data[employee_name]['consecutive_days'] = 0
+    
+    employees_data[employee_name]['previous_date'] = date
+
+# Iterate through employee data to find and print the required information
+for employee_name, data in employees_data.items():
+    consecutive_days = data['consecutive_days']
+    shifts = data['shifts']
+    
+    for i in range(1, len(shifts)):
+        shift_date, hours_worked = shifts[i]
+        prev_shift_date, prev_hours_worked = shifts[i - 1]
+        
+        if consecutive_days >= 6:  # The code checks for 6 consecutive days instead of 7
+            print(f"Employee: {employee_name}, Date: {shift_date}, Position: 7 consecutive days")
+        
+        time_between_shifts = (shift_date - prev_shift_date).total_seconds() / 3600  # Calculate hours
+        if 1 < time_between_shifts < 10:
+            print(f"Employee: {employee_name}, Date: {shift_date}, Position: Less than 10 hours between shifts")
+        
+        if hours_worked > 840:  # Assuming 840 minutes are equivalent to 14 hours
+            print(f"Employee: {employee_name}, Date: {shift_date}, Position: More than 14 hours in a single shift")
